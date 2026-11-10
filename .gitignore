@@ -1,0 +1,21 @@
+# 临时产物
+*.tmp
+*.log
+
+# 本地备份 / 打包结果
+app.asar
+app.asar.*
+*.asar
+
+# 依赖
+node_modules/
+package-lock.json
+
+# 系统文件
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 编辑器
+.vscode/
+.idea/
