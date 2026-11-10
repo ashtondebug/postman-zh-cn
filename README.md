@@ -79,10 +79,11 @@ cd postman-zh-cn\patcher
 
 ```powershell
 cd patcher
-node build.js ..\..\..\Postman\app-12.36.1\resources\app.asar.pmcn-backup  # 仅用于统计命中率，可省略该参数
-node -e "new Function(require('fs').readFileSync('pm-cn.js','utf8'))"      # 语法自检
-.\install.ps1
+node build.js        # 由 dict.json + pm-cn.template.js 重新生成 pm-cn.js
+.\install.ps1        # 注入到本机 Postman 并重启
 ```
+
+`install.ps1` 会从 `pm-cn.js` 打包，所以改完词典必须先跑 `build.js`。
 
 想找漏翻的文案，在 Postman 里按 `Ctrl+Shift+I` 打开 DevTools，或在页面控制台执行：
 

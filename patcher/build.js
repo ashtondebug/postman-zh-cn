@@ -25,37 +25,48 @@ function walk(node, prefix, out) {
 }
 
 const asar = process.argv[2];
-const { header, dataStart } = readHeader(asar);
-const files = [];
-walk(header, '', files);
+const stats = {};
+if (asar && fs.existsSync(asar)) {
+  const { header, dataStart } = readHeader(asar);
+  const files = [];
+  walk(header, '', files);
 
-const scanPaths = ['js/scratchpad/scratchpad.js', 'js/requester.js', 'js/vendor-ui.js', 'js/preload.js'];
-const fd = fs.openSync(asar, 'r');
-const texts = {};
-for (const p of scanPaths) {
-  const f = files.find(x => x.path === p);
-  if (!f || f.unpacked) continue;
-  const buf = Buffer.alloc(f.size);
-  fs.readSync(fd, buf, 0, f.size, dataStart + Number(f.offset));
-  texts[p] = buf.toString('utf8');
-}
-fs.closeSync(fd);
-
-const keys = Object.keys(dict);
-const found = [];
-const missing = [];
-for (const k of keys) {
-  let hit = false;
-  for (const p of Object.keys(texts)) {
-    if (texts[p].indexOf('"' + k + '"') !== -1 || texts[p].indexOf("'" + k + "'") !== -1 || texts[p].indexOf('>' + k + '<') !== -1) { hit = true; break; }
+  const scanPaths = ['js/scratchpad/scratchpad.js', 'js/requester.js', 'js/vendor-ui.js', 'js/preload.js'];
+  const fd = fs.openSync(asar, 'r');
+  const texts = {};
+  for (const p of scanPaths) {
+    const f = files.find(x => x.path === p);
+    if (!f || f.unpacked) continue;
+    const buf = Buffer.alloc(f.size);
+    fs.readSync(fd, buf, 0, f.size, dataStart + Number(f.offset));
+    texts[p] = buf.toString('utf8');
   }
-  (hit ? found : missing).push(k);
+  fs.closeSync(fd);
+
+  const keys = Object.keys(dict);
+  const found = [];
+  const missing = [];
+  for (const k of keys) {
+    let hit = false;
+    for (const p of Object.keys(texts)) {
+      if (texts[p].indexOf('"' + k + '"') !== -1 || texts[p].indexOf("'" + k + "'") !== -1 || texts[p].indexOf('>' + k + '<') !== -1) { hit = true; break; }
+    }
+    (hit ? found : missing).push(k);
+  }
+  stats.found = found.length;
+  stats.total = keys.length;
+  stats.missing = missing;
+} else {
+  console.log('（未提供 app.asar 路径，跳过命中率统计，仅生成 pm-cn.js）');
 }
 
 const body = tpl.replace('__DICT__', JSON.stringify(dict, null, 2));
 fs.writeFileSync(path.join(W, 'pm-cn.js'), body, 'utf8');
 
-console.log('dict entries:', keys.length, 'bytes:', Buffer.byteLength(body));
-console.log('present as UI literal:', found.length, 'of', keys.length);
-console.log('not literal in scanned bundles:', missing.length);
-console.log(missing.slice(0, 40).join(' | '));
+console.log('dict entries:', Object.keys(dict).length, 'bytes:', Buffer.byteLength(body));
+if (stats.total) {
+  console.log('present as UI literal:', stats.found, 'of', stats.total);
+  console.log('not literal in scanned bundles:', stats.total - stats.found);
+  console.log(stats.missing.slice(0, 40).join(' | '));
+}
+console.log('已生成 pm-cn.js');
